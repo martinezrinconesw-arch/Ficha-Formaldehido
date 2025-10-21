@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha Técnica Interactiva: Formaldehído (CH₂O)</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Three.js para la visualización 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Carga de D3.js para la visualización de datos (Gráfico) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        /* Configuración de la fuente Inter y un fondo oscuro */
+        :root {
+            --color-primary: #1e3a8a; /* Blue 800 */
+            --color-secondary: #fcd34d; /* Amber 300 */
+            --color-danger: #dc2626; /* Red 600 */
+            --color-safe: #10b981; /* Emerald 500 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712; /* Gray 950 */
+            color: #f3f4f6; /* Gray 100 */
+            line-height: 1.6;
+        }
+        .main-container {
+            transition: all 0.5s ease-in-out;
+        }
+        .tab-button.active {
+            background-color: var(--color-primary);
+            color: white;
+            border-bottom-width: 4px;
+            border-color: var(--color-secondary);
+        }
+        .card {
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); /* Base shadow */
+        }
+        .card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5); /* Lifted shadow */
+        }
+        /* Estilo para el diamante NFPA */
+        .nfpa-diamond {
+            width: 150px;
+            height: 150px;
+            transform: rotate(45deg);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+            margin: 0 auto;
+        }
+        .nfpa-diamond > div {
+            border: 2px solid #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: black;
+            transform: rotate(-45deg);
+            transition: all 0.3s;
+        }
+        .nfpa-health { background-color: #3b82f6; } /* Azul */
+        .nfpa-flam { background-color: #ef4444; } /* Rojo */
+        .nfpa-react { background-color: #facc15; } /* Amarillo */
+        .nfpa-spec { background-color: #f9fafb; color: black !important; } /* Blanco */
+        
+        #molecule-3d-container {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: #111827;
+        }
+        /* Estilo para tooltips (Glosario Interactivo) */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            width: 250px;
+            background-color: #1f2937; /* Gray 800 */
+            color: #f3f4f6;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%; /* Posición encima del texto */
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+        }
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1f2937 transparent transparent transparent;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        /* Estilos específicos del conversor y riesgo */
+        .converter-input {
+            transition: all 0.3s;
+            border-left: 4px solid var(--color-primary);
+        }
+        .converter-input:focus {
+            border-color: var(--color-secondary);
+            box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.5); /* Amber 300 con opacidad */
+        }
+        .risk-level-display {
+            transition: all 0.5s ease-in-out;
+            min-height: 100px;
+        }
+        /* Estilos para D3.js */
+        #chart-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #1f2937;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .bar {
+            transition: fill 0.3s ease-in-out;
+        }
+        .bar:hover {
+            opacity: 0.8;
+        }
+
+        /* Estilos para el juego de aplicaciones */
+        .product-card {
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #374151; /* Gray 700 */
+            border: 2px solid transparent;
+        }
+        .product-card:hover {
+            transform: scale(1.03);
+            border-color: var(--color-secondary);
+        }
+        .product-card.revealed {
+            cursor: default;
+        }
+        .product-card.positive {
+            border-color: var(--color-danger);
+            background-color: #451a1a; /* Red 900 / 50 */
+        }
+        .product-card.negative {
+            border-color: var(--color-safe);
+            background-color: #1a452a; /* Green 900 / 50 */
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-blue': '#1e3a8a',
+                        'accent-yellow': '#fcd34d',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="max-w-6xl mx-auto bg-gray-800/70 backdrop-blur-sm rounded-xl shadow-2xl p-6 sm:p-10 border border-gray-700 main-container">
+
+        <!-- HEADER PRINCIPAL -->
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-extrabold text-accent-yellow mb-2 tracking-tight">FORMALDEHÍDO</h1>
+            <!-- FÓRMULA QUÍMICA (CH₂O sin LaTeX) -->
+            <p class="text-2xl text-gray-300">Ficha Técnica Interactiva: Metanal (CH<sub>2</sub>O)</p>
+            <div class="mt-4 flex flex-wrap justify-center items-center gap-3 text-lg">
+                <span class="bg-red-600 text-white font-semibold px-3 py-1 rounded-full shadow-lg animate-pulse">CARCINÓGENO IARC Grupo 1</span>
+                <span class="text-primary-blue bg-white font-bold px-3 py-1 rounded-full shadow-lg">CAS: 50-00-0</span>
+            </div>
+        </header>
+
+        <!-- SECCIÓN DE NAVEGACIÓN (TABS) -->
+        <nav class="mb-8">
+            <div class="flex flex-wrap border-b border-gray-600">
+                <button data-tab="identification" class="tab-button active flex-1 px-4 py-3 text-sm sm:text-base font-semibold transition duration-300 border-b-4 border-transparent hover:bg-gray-700">
+                    1. Identificación
+                </button>
+                <button data-tab="properties" class="tab-button flex-1 px-4 py-3 text-sm sm:text-base font-semibold transition duration-300 border-b-4 border-transparent hover:bg-gray-700">
+                    2. Propiedades
+                </button>
+                <button data-tab="risks" class="tab-button flex-1 px-4 py-3 text-sm sm:text-base font-semibold transition duration-300 border-b-4 border-transparent hover:bg-gray-700">
+                    3. Riesgos
+                </button>
+                <button data-tab="safety" class="tab-button flex-1 px-4 py-3 text-sm sm:text-base font-semibold transition duration-300 border-b-4 border-transparent hover:bg-gray-700">
+                    4. Seguridad
+                </button>
+                <button data-tab="toxicology" class="tab-button flex-1 px-4 py-3 text-sm sm:text-base font-semibold transition duration-300 border-b-4 border-transparent hover:bg-gray-700">
+                    5. Usos & Toxicología
+                </button>
+                <button data-tab="help" class="tab-button flex-1 px-4 py-3 text-sm sm:text-base font-semibold transition duration-300 border-b-4 border-transparent hover:bg-gray-700">
+                    6. Ayuda/Guía
+                </button>
+            </div>
+        </nav>
+
+        <!-- CONTENIDO DE LAS PESTAÑAS -->
+        <div id="tab-content-container">
+
+            <!-- PESTAÑA 1: IDENTIFICACIÓN -->
+            <div data-tab-content="identification" class="tab-content space-y-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Sección de Datos Clave (con Glosario Interactivo) -->
+                    <div class="bg-gray-700 p-6 rounded-xl shadow-lg card">
+                        <h3 class="text-2xl font-bold mb-4 text-accent-yellow flex items-center">
+                            <!-- SVG: Icono de etiqueta -->
+                            <svg class="w-6 h-6 mr-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                            Datos de Identificación Clave
+                        </h3>
+                        
+                        <!-- IMAGEN AGREGADA: Solución Comercial (Formalina) -->
+                        <div class="mb-6 text-center">
+                             <img src="https://placehold.co/400x200/1e3a8a/fcd34d?text=Soluci%C3%B3n+de+Formalina+(37%25)" 
+                                  alt="Imagen de Formalina, la solución acuosa de Formaldehído" 
+                                  class="rounded-lg shadow-xl mx-auto border-2 border-primary-blue w-full max-w-xs object-cover"
+                                  onerror="this.onerror=null;this.src='https://placehold.co/400x200/500/FFF?text=Error+de+Carga+de+Imagen';"
+                                  loading="lazy">
+                             <p class="text-xs text-gray-400 mt-2">Formaldehído es usualmente comercializado como Formalina (solución acuosa).</p>
+                        </div>
+                        
+                        <ul class="space-y-3 text-gray-200">
+                            <li><strong class="text-primary-blue">Nombre químico:</strong> Formaldehído</li>
+                            <li><strong class="text-primary-blue">Nombre común/comercial:</strong> Metanal, Formol (en disolución acuosa)</li>
+                            <!-- FÓRMULA QUÍMICA (CH₂O sin LaTeX) -->
+                            <li><strong class="text-primary-blue">Fórmula química:</strong> CH<sub>2</sub>O</li>
+                            <li>
+                                <strong class="text-primary-blue tooltip-container">Número CAS
+                                    <span class="tooltip-text">Registro Universal para una sustancia química única (Chemical Abstracts Service).</span>
+                                :</strong> 50-00-0
+                                <button id="copy-cas" class="ml-2 text-xs bg-gray-600 hover:bg-primary-blue text-white py-0.5 px-2 rounded transition hover:scale-105" title="Copiar al portapapeles">
+                                    Copiar
+                                </button>
+                            </li>
+                            <li>
+                                <strong class="text-primary-blue tooltip-container">Número UN
+                                    <span class="tooltip-text">Código de cuatro dígitos para identificar sustancias peligrosas en el transporte (United Nations).</span>
+                                :</strong> UN 1198 (anhidro) / UN 2209 (solución)
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Sección de Modelo 3D (Simulado con Three.js) -->
+                    <div class="bg-gray-700 p-3 rounded-xl shadow-lg card">
+                        <h3 class="text-2xl font-bold mb-2 text-accent-yellow text-center">
+                             Modelo Molecular 3D
+                        </h3>
+                        <div id="molecule-3d-container" class="h-64">
+                             <!-- El canvas se inyecta aquí --> 
+                        </div>
+                        <p class="text-center text-sm mt-2 text-gray-400">Simulación interactiva de la geometría molecular (trigonal plana). Clic y arrastra para rotar.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 2: PROPIEDADES (Con Simulación de Estado y Gráfico) -->
+            <div data-tab-content="properties" class="tab-content hidden space-y-8">
+                <h3 class="text-3xl font-bold text-accent-yellow">Análisis de Propiedades Físicas y Químicas</h3>
+
+                <!-- Contenedor del Gráfico de Límites Históricos -->
+                <div class="bg-gray-700 p-6 rounded-xl shadow-lg border-2 border-primary-blue card">
+                    <h4 class="text-xl font-semibold mb-4 text-primary-blue flex items-center">
+                        <!-- SVG: Icono de gráfico -->
+                        <svg class="w-6 h-6 mr-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l2 2 4-4m5 4h.01M16 19h6m-3-3v6M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                        Gráfico de Límites de Exposición Históricos (PEL)
+                    </h4>
+                    <div id="chart-container" class="h-64">
+                        <!-- Gráfico D3.js se inyecta aquí -->
+                    </div>
+                    <p class="text-sm text-center text-gray-400 mt-2">Tendencia simulada de los límites de exposición ocupacional a lo largo del tiempo (ppm).</p>
+                </div>
+
+
+                <!-- Simulación Interactiva de Estado Físico -->
+                <div class="bg-gray-700 p-6 rounded-xl shadow-lg border-2 border-primary-blue card">
+                    <h4 class="text-xl font-semibold mb-4 text-primary-blue flex items-center">
+                        <!-- SVG: Icono de termómetro -->
+                        <svg class="w-6 h-6 mr-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V5b2 0 4 0 4 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2zM12 4a1 1 0 00-1 1v12a1 1 0 002 0V5a1 1 0 00-1-1z"></path></svg>
+                        Simulación de Estado Físico vs. Temperatura
+                    </h4>
+                    <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                        <input type="number" id="temp-input" value="25" class="w-full sm:w-1/3 p-3 bg-gray-900 border border-gray-600 rounded-lg text-lg text-center converter-input" placeholder="Ingrese Temperatura (°C)">
+                        <button id="check-state-btn" class="w-full sm:w-auto px-6 py-3 bg-accent-yellow text-gray-900 font-bold rounded-lg hover:bg-yellow-400 transition shadow-md hover:scale-105">
+                            Ver Estado Ahora
+                        </button>
+                    </div>
+                    <div id="state-output" class="mt-4 p-4 text-center text-lg font-bold rounded-lg transition duration-500">
+                        <!-- Output dinámico corregido -->
+                        La temperatura ambiente (25 °C) indica que el Formaldehído puro es un Gas.
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: CONVERSOR DE UNIDADES DINÁMICO -->
+                <div class="bg-gray-700 p-6 rounded-xl shadow-lg border-2 border-accent-yellow card">
+                    <h4 class="text-xl font-semibold mb-4 text-accent-yellow flex items-center">
+                        <!-- SVG: Icono de conversión -->
+                        <svg class="w-6 h-6 mr-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                        Conversor de Unidades Químicas (CH₂O)
+                    </h4>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+
+                        <!-- Conversor de Concentración (ppm a mg/m³) -->
+                        <div class="space-y-3">
+                            <p class="font-medium text-primary-blue">Concentración (Formaldehído)</p>
+                            <input type="number" id="ppm-input" placeholder="Valor en ppm" class="converter-input w-full p-3 bg-gray-900 border-0 rounded-lg text-lg text-white" min="0">
+                            <div class="bg-gray-900 p-3 rounded-lg text-lg font-mono flex justify-between items-center border border-gray-600">
+                                <span class="text-gray-400">mg/m³:</span>
+                                <span id="mg-m3-output" class="text-safe font-bold">0.00</span>
+                            </div>
+                            <p class="text-xs text-gray-400">Asume T = 25 °C y P = 1 atm. (Masa Molar: 30.03 g/mol)</p>
+                        </div>
+
+                        <!-- Conversor de Temperatura (°C, °F, K) -->
+                        <div class="space-y-3">
+                            <p class="font-medium text-primary-blue">Temperatura</p>
+                            <input type="number" id="temp-converter-input" placeholder="Valor en °C" class="converter-input w-full p-3 bg-gray-900 border-0 rounded-lg text-lg text-white">
+                            <div class="bg-gray-900 p-3 rounded-lg text-lg font-mono flex justify-between items-center border border-gray-600">
+                                <span class="text-gray-400">°F:</span>
+                                <span id="f-output" class="text-accent-yellow font-bold">0.00</span>
+                            </div>
+                            <div class="bg-gray-900 p-3 rounded-lg text-lg font-mono flex justify-between items-center border border-gray-600">
+                                <span class="text-gray-400">Kelvin (K):</span>
+                                <span id="k-output" class="text-accent-yellow font-bold">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Propiedades Químicas -->
+                <div class="bg-gray-700 p-6 rounded-xl shadow-lg card">
+                    <h4 class="text-xl font-semibold mb-3 text-primary-blue">Propiedades Químicas y Estabilidad</h4>
+                    <ul class="space-y-2 list-disc list-inside text-gray-200">
+                        <!-- \textbf corregido -->
+                        <li><strong>Reactividad:</strong> Altamente reactivo. Se oxida fácilmente a ácido fórmico.</li>
+                        <li><strong>Estabilidad:</strong> Inestable en estado puro; se estabiliza comercialmente con metanol.</li>
+                        <li><strong>Incompatibilidad:</strong> Agentes oxidantes fuertes, ácidos y bases fuertes.</li>
+                        <!-- pH corregido -->
+                        <li><strong>pH (Solución 37%):</strong> Ligeramente ácido, pH $\approx$ 3–4.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 3: RIESGOS Y PELIGROS (Simulador de Concentración) -->
+            <div data-tab-content="risks" class="tab-content hidden space-y-8">
+                <h3 class="text-3xl font-bold text-red-500 mb-6">Matriz de Riesgos y Peligros</h3>
+
+                <!-- SISTEMA DE ALERTA DE CONCENTRACIÓN -->
+                <div class="bg-gray-900 p-6 rounded-xl shadow-2xl border-2 border-red-500/50 card">
+                    <h4 class="text-2xl font-bold mb-4 text-red-400 flex items-center">
+                        <svg class="w-7 h-7 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Simulador de Riesgo por Concentración (ppm)
+                    </h4>
+                    <label for="risk-slider" class="block text-lg mb-2 text-primary-blue">Concentración de Formaldehído en el aire (ppm): <span id="slider-value" class="font-bold text-accent-yellow">0.0</span></label>
+                    <input type="range" id="risk-slider" min="0" max="25" step="0.1" value="0.0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+
+                    <!-- Display Dinámico del Nivel de Riesgo -->
+                    <div id="risk-level-display" class="risk-level-display mt-6 p-5 text-center rounded-lg shadow-xl text-white">
+                        <!-- Contenido dinámico inyectado por JS -->
+                    </div>
+                </div>
+
+
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <!-- Columna 1: Peligros GHS -->
+                    <div class="lg:col-span-2">
+                        <h4 class="text-2xl font-bold mb-4 text-accent-yellow tooltip-container">Clasificación Global Armonizada (GHS)
+                            <span class="tooltip-text">Sistema internacional para clasificar y etiquetar sustancias y mezclas peligrosas.</span>
+                        </h4>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <!-- Peligro 1 (Inflamable) -->
+                            <div class="flex items-start p-4 bg-red-800/50 border border-red-500 rounded-lg shadow-xl card hover:scale-105">
+                                <span class="text-3xl mr-3">🔥</span>
+                                <div>
+                                    <p class="font-semibold text-white">Inflamable (Cat. 2)</p>
+                                    <p class="text-sm text-red-200">Gas/vapor altamente inflamable. Puede formar mezclas explosivas con aire.</p>
+                                </div>
+                            </div>
+                            <!-- Peligro 2 (Tóxico Agudo) -->
+                            <div class="flex items-start p-4 bg-red-800/50 border border-red-500 rounded-lg shadow-xl card hover:scale-105">
+                                <span class="text-3xl mr-3">💀</span>
+                                <div>
+                                    <p class="font-semibold text-white">Tóxico Agudo (Cat. 3)</p>
+                                    <p class="text-sm text-red-200">Muy tóxico por inhalación, ingestión o contacto dérmico. DL₅₀ baja.</p>
+                                </div>
+                            </div>
+                            <!-- Peligro 3 (Carcinógeno) -->
+                            <div class="flex items-start p-4 bg-red-800/50 border border-red-500 rounded-lg shadow-xl card hover:scale-105">
+                                <span class="text-3xl mr-3">🧬</span>
+                                <div>
+                                    <p class="font-semibold text-white">Carcinógeno (Cat. 1B)</p>
+                                    <p class="text-sm text-red-200">Sustancia con evidencia suficiente para ser considerada cancerígena para el ser humano (IARC Grupo 1).</p>
+                                </div>
+                            </div>
+                            <!-- Peligro 4 (Corrosivo) -->
+                            <div class="flex items-start p-4 bg-red-800/50 border border-red-500 rounded-lg shadow-xl card hover:scale-105">
+                                <span class="text-3xl mr-3">💥</span>
+                                <div>
+                                    <p class="font-semibold text-white">Corrosivo / Irritante</p>
+                                    <p class="text-sm text-red-200">Causa irritación severa en piel, ojos y vías respiratorias.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna 2: NFPA -->
+                    <div class="lg:col-span-1 text-center">
+                        <h4 class="text-2xl font-bold mb-4 text-primary-blue tooltip-container">Diamante NFPA 704
+                            <span class="tooltip-text">Sistema de identificación de riesgos para la respuesta a emergencias (National Fire Protection Association).</span>
+                        </h4>
+                        <div class="nfpa-diamond mb-4">
+                            <div class="nfpa-health hover:scale-105 transition-transform">3</div>
+                            <div class="nfpa-flam hover:scale-105 transition-transform">2</div>
+                            <div class="nfpa-spec hover:scale-105 transition-transform"></div>
+                            <div class="nfpa-react hover:scale-105 transition-transform">0</div>
+                        </div>
+                        <p id="nfpa-desc" class="text-gray-300 text-sm h-10 transition-all">Pase el cursor sobre los números para ver la descripción del riesgo.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 4: SEGURIDAD Y TOXICOLOGÍA (Incluye el nuevo FAQ) -->
+            <div data-tab-content="safety" class="tab-content hidden space-y-8">
+                <h3 class="text-3xl font-bold text-safe">Medidas de Seguridad y Respuesta a Emergencias</h3>
+
+                <!-- NUEVA SECCIÓN: FAQ de Seguridad (Acordeón Dinámico) -->
+                 <div class="bg-gray-700 p-6 rounded-xl shadow-lg border-l-4 border-accent-yellow card">
+                    <h4 class="text-xl font-semibold mb-4 text-accent-yellow flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c0-.585.584-.973 1.168-.973.584 0 1.168.388 1.168.973v3c0 .585-.584.973-1.168.973-.584 0-1.168-.388-1.168-.973m4.896 0c0-.585.584-.973 1.168-.973.584 0 1.168.388 1.168.973v3c0 .585-.584.973-1.168.973-.584 0-1.168-.388-1.168-.973m-1.168-3c0-3.313 2.687-6 6-6s6 2.687 6 6-2.687 6-6 6h-2c-3.313 0-6-2.687-6-6z"></path></svg>
+                        Preguntas Frecuentes de Seguridad (FAQ)
+                    </h4>
+                    <div id="faq-container" class="space-y-3">
+                        <!-- FAQ Item 1: Almacenamiento -->
+                        <div class="border border-gray-600 rounded-lg overflow-hidden">
+                            <button class="w-full text-left p-4 bg-gray-800 hover:bg-gray-700 font-medium text-white transition-colors flex justify-between items-center" onclick="toggleFaq(this)">
+                                ¿Cómo debe almacenarse el Formaldehído?
+                                <span class="transform transition-transform duration-300 rotate-0">▼</span>
+                            </button>
+                            <div class="faq-content p-4 text-gray-300 hidden transition-all duration-300 ease-in-out bg-gray-700/50">
+                                Debe almacenarse en recipientes sellados, en un área fresca, oscura y bien ventilada. Mantener estrictamente alejado de agentes oxidantes, ácidos, bases y fuentes de ignición.
+                            </div>
+                        </div>
+                        <!-- FAQ Item 2: Derrame -->
+                        <div class="border border-gray-600 rounded-lg overflow-hidden">
+                            <button class="w-full text-left p-4 bg-gray-800 hover:bg-gray-700 font-medium text-white transition-colors flex justify-between items-center" onclick="toggleFaq(this)">
+                                ¿Cuál es el procedimiento en caso de derrame?
+                                <span class="transform transition-transform duration-300 rotate-0">▼</span>
+                            </button>
+                            <div class="faq-content p-4 text-gray-300 hidden transition-all duration-300 ease-in-out bg-gray-700/50">
+                                Evacuar el área. Ventilar el lugar. Utilizar equipo de protección respiratoria (SCBA) si la concentración es alta. Absorber el líquido con material inerte (arena, tierra de diatomeas) y desecharlo como residuo peligroso.
+                            </div>
+                        </div>
+                        <!-- FAQ Item 3: Extinción de incendios -->
+                        <div class="border border-gray-600 rounded-lg overflow-hidden">
+                            <button class="w-full text-left p-4 bg-gray-800 hover:bg-gray-700 font-medium text-white transition-colors flex justify-between items-center" onclick="toggleFaq(this)">
+                                ¿Qué tipo de extintor se debe usar?
+                                <span class="transform transition-transform duration-300 rotate-0">▼</span>
+                            </button>
+                            <div class="faq-content p-4 text-gray-300 hidden transition-all duration-300 ease-in-out bg-gray-700/50">
+                                Usar extintores de $\text{CO}_2$ (dióxido de carbono) o polvo químico seco. El agua puede ser ineficaz contra el líquido, pero puede ser utilizada para enfriar los contenedores expuestos al fuego.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EPP y Primeros Auxilios (Acordeón Simple) -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bg-gray-700 p-6 rounded-xl shadow-lg card">
+                        <h4 class="text-xl font-semibold mb-4 text-primary-blue flex items-center">
+                            <svg class="w-6 h-6 mr-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2c-4.007 0-7.727 1.258-10.89 3.584M2 13v-3.714C2 6.477 4.477 4 7.286 4h9.428C19.523 4 22 6.477 22 9.286V13m-6 6h-6m6 0v-4"></path></svg>
+                            Equipo de Protección Personal (EPP)
+                        </h4>
+                        <ul class="space-y-3">
+                            <li class="flex items-center text-gray-200"><span class="text-xl mr-2">🧤</span> Guantes de nitrilo</li>
+                            <li class="flex items-center text-gray-200"><span class="text-xl mr-2">👓</span> Gafas de seguridad</li>
+                            <li class="flex items-center text-gray-200"><span class="text-xl mr-2">😷</span> Mascarilla con filtro para vapores orgánicos</li>
+                            <li class="flex items-center text-gray-200"><span class="text-xl mr-2">🥼</span> Bata de laboratorio</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-gray-700 p-6 rounded-xl shadow-lg card">
+                        <h4 class="text-xl font-semibold mb-4 text-red-400">Primeros Auxilios</h4>
+                         <div id="accordion-container" class="space-y-3">
+                            <div class="border border-gray-600 rounded-lg overflow-hidden hover:scale-105 transition-transform">
+                                <button class="w-full text-left p-3 bg-gray-600 hover:bg-gray-500 font-medium" onclick="toggleAccordion(this)">
+                                    Inhalación / Piel / Ojos / Ingestión
+                                </button>
+                                <div class="accordion-content p-3 text-gray-300 hidden">
+                                    <!-- \textbf corregido -->
+                                    <strong>Inhalación:</strong> Trasladar al aire libre, administrar oxígeno si es necesario.<br>
+                                    <strong>Piel:</strong> Lavar con abundante agua y jabón.<br>
+                                    <strong>Ojos:</strong> Enjuagar con agua por al menos 15 minutos.<br>
+                                    <strong>Ingestión:</strong> NO inducir el vómito; buscar atención médica inmediata.
+                                </div>
+                            </div>
+                         </div>
+                         <p class="text-xs text-gray-400 mt-4">Mantener en áreas bien ventiladas, lejos de fuentes de calor y oxidantes fuertes.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 5: TOXICOLOGÍA Y USOS (Añadido juego interactivo) -->
+            <div data-tab-content="toxicology" class="tab-content hidden space-y-8">
+                <h3 class="text-3xl font-bold text-safe">Toxicología y Aplicaciones</h3>
+                
+                <!-- JUEGO INTERACTIVO: Dónde se esconde el Formaldehído -->
+                <div class="bg-gray-900 p-6 rounded-xl shadow-2xl border-2 border-accent-yellow/50">
+                    <h4 class="text-2xl font-bold mb-4 text-accent-yellow flex items-center">
+                        <svg class="w-7 h-7 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17.514l-4.706-4.706A4 4 0 014 10.743V7a3 3 0 013-3h3.743a4 4 0 012.828 1.172l4.706 4.706a4 4 0 010 5.656l-5.656 5.656a4 4 0 01-5.656 0z"></path></svg>
+                        Mini-Juego: ¿Dónde se Esconde el Formaldehído?
+                    </h4>
+                    <p class="mb-4 text-gray-300">Haz clic en los productos para revelar si contienen o se fabrican con Formaldehído.</p>
+
+                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <!-- Producto 1: Champú -->
+                        <div class="product-card p-4 rounded-lg text-center" data-product="shampoo" data-contains="false">
+                            <span class="text-4xl">🧴</span>
+                            <p class="mt-2 font-semibold text-white">Champú</p>
+                            <p class="result-text mt-1 text-sm font-bold opacity-0 transition-opacity duration-500"></p>
+                        </div>
+                        <!-- Producto 2: Muebles de Aglomerado -->
+                        <div class="product-card p-4 rounded-lg text-center" data-product="furniture" data-contains="true">
+                            <span class="text-4xl">🛋️</span>
+                            <p class="mt-2 font-semibold text-white">Muebles de Aglomerado</p>
+                            <p class="result-text mt-1 text-sm font-bold opacity-0 transition-opacity duration-500"></p>
+                        </div>
+                        <!-- Producto 3: Manzana -->
+                        <div class="product-card p-4 rounded-lg text-center" data-product="apple" data-contains="false">
+                            <span class="text-4xl">🍎</span>
+                            <p class="mt-2 font-semibold text-white">Manzana</p>
+                            <p class="result-text mt-1 text-sm font-bold opacity-0 transition-opacity duration-500"></p>
+                        </div>
+                        <!-- Producto 4: Esmalte de Uñas -->
+                        <div class="product-card p-4 rounded-lg text-center" data-product="nail-polish" data-contains="true">
+                            <span class="text-4xl">💅</span>
+                            <p class="mt-2 font-semibold text-white">Esmalte de Uñas</p>
+                            <p class="result-text mt-1 text-sm font-bold opacity-0 transition-opacity duration-500"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Toxicología -->
+                <div class="bg-gray-700 p-6 rounded-xl shadow-lg border-l-4 border-red-500 card">
+                    <h4 class="text-xl font-semibold mb-3 text-red-500">Información Toxicológica Clave</h4>
+                    <div class="space-y-3 grid md:grid-cols-2">
+                        <div>
+                            <p class="font-medium text-primary-blue tooltip-container">DL₅₀ (oral, rata)
+                                <span class="tooltip-text">Dosis Letal 50: Dosis requerida para matar al 50% de la población de prueba, indicando toxicidad aguda.</span>
+                            :</p>
+                            <!-- Valores sin LaTeX -->
+                            <p class="text-lg text-white font-mono"> 100 mg/kg</p>
+                        </div>
+                        <div>
+                            <p class="font-medium text-primary-blue tooltip-container">CL₅₀ (inhalación, rata, 4 h)
+                                <span class="tooltip-text">Concentración Letal 50: Concentración en el aire requerida para matar al 50% de la población de prueba por inhalación.</span>
+                            :</p>
+                            <!-- Valores sin LaTeX (m³) -->
+                            <p class="text-lg text-white font-mono"> 578 mg/m³</p>
+                        </div>
+                    </div>
+                    <!-- \textbf corregido -->
+                    <p class="font-medium text-primary-blue mt-4"><strong>Efectos Adversos:</strong> Irritación ocular, nasal y pulmonar, sensibilización cutánea, daños hepáticos y renales, potencial cancerígeno.</p>
+                </div>
+
+                <!-- Impacto Ambiental y Regulatorio -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bg-gray-700 p-6 rounded-xl shadow-lg border-l-4 border-safe card">
+                        <h4 class="text-xl font-semibold mb-3 text-safe">Impacto Ambiental</h4>
+                        <ul class="space-y-2 list-disc list-inside text-gray-200">
+                            <!-- \textbf corregido -->
+                            <li><strong>Ecotoxicidad:</strong> Tóxico para peces, invertebrados acuáticos y plantas.</li>
+                            <li><strong>Degradabilidad:</strong> Se degrada relativamente rápido en el aire por fotólisis y oxidación.</li>
+                            <li><strong>Bioacumulación:</strong> Baja tendencia.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-gray-700 p-6 rounded-xl shadow-lg border-l-4 border-primary-blue card">
+                        <h4 class="text-xl font-semibold mb-3 text-primary-blue">Información Regulatoria</h4>
+                        <ul class="space-y-2 list-disc list-inside text-gray-200">
+                            <li><strong>Reglamentación:</strong> Reglamento (CE) N.º 1272/2008 (CLP), OSHA, NIOSH.</li>
+                            <li><strong>NFPA:</strong> Salud: 3 | Inflamabilidad: 2 | Reactividad: 0</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- NUEVA PESTAÑA 6: AYUDA/GUÍA -->
+            <div data-tab-content="help" class="tab-content hidden space-y-8">
+                <h3 class="text-3xl font-bold text-primary-blue mb-6">Guía y Funcionalidades de la Ficha Técnica</h3>
+                
+                <p class="text-gray-300">Esta ficha técnica interactiva está diseñada para hacer que la información del Formaldehído sea más accesible y fácil de entender. Aquí te explicamos cómo usar las funcionalidades interactivas:</p>
+
+                <div class="bg-gray-700 p-6 rounded-xl shadow-lg space-y-5">
+                    
+                    <!-- 1. Modelo 3D -->
+                    <div>
+                        <h4 class="text-xl font-semibold text-accent-yellow">Modelo Molecular 3D (Pestaña 1)</h4>
+                        <p class="text-gray-200">
+                            <span class="font-bold text-primary-blue">Función:</span> Muestra la estructura espacial de la molécula de Formaldehído.
+                        </p>
+                        <p class="text-gray-400 text-sm">
+                            <span class="font-bold">Interacción:</span> Haz clic o toca y arrastra dentro del recuadro para rotar la molécula y ver su geometría trigonal plana desde diferentes ángulos.
+                        </p>
+                    </div>
+
+                    <!-- 2. Glosario (Tooltips) -->
+                    <div>
+                        <h4 class="text-xl font-semibold text-accent-yellow">Glosario Interactivo (Tooltips) (Pestañas 1 & 3)</h4>
+                        <p class="text-gray-200">
+                            <span class="font-bold text-primary-blue">Función:</span> Proporciona definiciones rápidas de términos técnicos (como CAS, UN, DL₅₀).
+                        </p>
+                        <p class="text-gray-400 text-sm">
+                            <span class="font-bold">Interacción:</span> Pasa el cursor sobre el texto que tiene una pequeña sombra o borde punteado para que aparezca la definición.
+                        </p>
+                    </div>
+
+                    <!-- 3. Conversor de Unidades -->
+                    <div>
+                        <h4 class="text-xl font-semibold text-accent-yellow">Conversor de Unidades (Pestaña 2)</h4>
+                        <p class="text-gray-200">
+                            <span class="font-bold text-primary-blue">Función:</span> Permite convertir concentraciones de $\text{ppm}$ a $\text{mg/m}^3$ y temperaturas entre Celsius, Fahrenheit y Kelvin.
+                        </p>
+                        <p class="text-gray-400 text-sm">
+                            <span class="font-bold">Interacción:</span> Simplemente escribe un valor en el campo de entrada y los resultados se actualizarán automáticamente.
+                        </p>
+                    </div>
+
+                    <!-- 4. Simulador de Riesgo -->
+                    <div>
+                        <h4 class="text-xl font-semibold text-accent-yellow">Simulador de Riesgo (Pestaña 3)</h4>
+                        <p class="text-gray-200">
+                            <span class="font-bold text-primary-blue">Función:</span> Evalúa los efectos del Formaldehído en el cuerpo humano en tiempo real basados en la concentración ($\text{ppm}$) en el aire.
+                        </p>
+                        <p class="text-gray-400 text-sm">
+                            <span class="font-bold">Interacción:</span> Utiliza el control deslizante para ajustar la concentración de $0$ a $25 \text{ ppm}$ y observa cómo cambia el nivel de riesgo y la advertencia.
+                        </p>
+                    </div>
+
+                     <!-- 5. FAQ (Acordeón) -->
+                    <div>
+                        <h4 class="text-xl font-semibold text-accent-yellow">Acordeones de Información (Pestañas 4)</h4>
+                        <p class="text-gray-200">
+                            <span class="font-bold text-primary-blue">Función:</span> Organiza la información de Primeros Auxilios y Preguntas Frecuentes (FAQ) en secciones compactas.
+                        </p>
+                        <p class="text-gray-400 text-sm">
+                            <span class="font-bold">Interacción:</span> Haz clic en la barra de título de la pregunta o sección para expandir y revelar el contenido detallado.
+                        </p>
+                    </div>
+                    
+                    <!-- 6. Juego (Aplicaciones) -->
+                    <div>
+                        <h4 class="text-xl font-semibold text-accent-yellow">Mini-Juego de Aplicaciones (Pestaña 5)</h4>
+                        <p class="text-gray-200">
+                            <span class="font-bold text-primary-blue">Función:</span> Prueba tus conocimientos sobre dónde se utiliza o se encuentra el Formaldehído.
+                        </p>
+                        <p class="text-gray-400 text-sm">
+                            <span class="font-bold">Interacción:</span> Haz clic en cada tarjeta de producto para revelar la respuesta.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+
+        </div> <!-- Fin de contenido de tabs -->
+
+    </div> <!-- Fin del contenedor principal -->
+
+    <!-- Script de Interacción, 3D, Conversor y Gráfico -->
+    <script>
+        // --- 1. Lógica de Tabs ---
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                tabContents.forEach(content => {
+                    if (content.dataset.tabContent === targetTab) {
+                        content.classList.remove('hidden');
+                    } else {
+                        content.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+        // --- 2. Lógica de Acordeón (Primeros Auxilios) ---
+        function toggleAccordion(button) {
+            const content = button.nextElementSibling;
+            content.classList.toggle('hidden');
+        }
+        
+        // --- 2b. Lógica de FAQ (Acordeón Moderno) ---
+        function toggleFaq(button) {
+            const content = button.nextElementSibling;
+            const arrow = button.querySelector('span');
+            
+            // Toggle visibility using max-height for smooth transition
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                // Calculate and set max-height for animation
+                content.style.maxHeight = content.scrollHeight + "px";
+                arrow.classList.add('rotate-180');
+            } else {
+                // Collapse
+                content.style.maxHeight = "0";
+                // Hide only after transition
+                setTimeout(() => {
+                    content.classList.add('hidden');
+                }, 300); 
+                arrow.classList.remove('rotate-180');
+            }
+
+            // Simple class toggle for the first time load
+            if (content.style.maxHeight === "") {
+                 content.style.maxHeight = content.scrollHeight + "px";
+            }
+        }
+
+
+        // --- 3. Lógica del Diamante NFPA ---
+        const nfpaDesc = document.getElementById('nfpa-desc');
+        const nfpaElements = [
+            { el: document.querySelector('.nfpa-health'), desc: '3 (Salud): Extremadamente Peligroso. Corrosivo, muy tóxico.' },
+            { el: document.querySelector('.nfpa-flam'), desc: '2 (Inflamabilidad): Se enciende si se calienta moderadamente.' },
+            { el: document.querySelector('.nfpa-react'), desc: '0 (Reactividad): Estable, incluso bajo exposición al fuego.' },
+            { el: document.querySelector('.nfpa-spec'), desc: 'Sin riesgo especial. (Campo reservado para riesgos especiales).' }
+        ];
+
+        nfpaElements.forEach(item => {
+            item.el.addEventListener('mouseover', () => {
+                nfpaDesc.textContent = item.desc;
+            });
+            item.el.addEventListener('mouseout', () => {
+                nfpaDesc.textContent = 'Pase el cursor sobre los números para ver la descripción del riesgo.';
+            });
+        });
+
+        // --- 4. Copiar al Portapapeles (CAS) ---
+        document.getElementById('copy-cas').addEventListener('click', function() {
+            const casNumber = '50-00-0';
+            const button = this;
+
+            try {
+                const tempInput = document.createElement('textarea');
+                tempInput.value = casNumber;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+
+                button.textContent = '¡Copiado!';
+                setTimeout(() => {
+                    button.textContent = 'Copiar';
+                }, 1500);
+            } catch (err) {
+                // Mensaje de error visible para el usuario si falla
+                button.textContent = 'Error';
+                setTimeout(() => {
+                    button.textContent = 'Copiar';
+                }, 1500);
+            }
+        });
+
+        // --- 5. Simulación Interactiva de Estado Físico ---
+        const tempInput = document.getElementById('temp-input');
+        const checkBtn = document.getElementById('check-state-btn');
+        const output = document.getElementById('state-output');
+
+        // Puntos de referencia
+        const T_FUSION = -92; // °C
+        const T_EBULLICION = -19; // °C
+
+        function checkPhysicalState() {
+            const temp = parseFloat(tempInput.value);
+            let stateText = '';
+            let stateClass = '';
+
+            if (isNaN(temp)) {
+                output.textContent = 'Por favor, ingrese un valor de temperatura válido.';
+                output.className = 'mt-4 p-4 text-center text-lg font-bold rounded-lg bg-gray-600';
+                return;
+            }
+
+            if (temp < T_FUSION) {
+                stateText = `SÓLIDO: A ${temp}°C, está por debajo del punto de fusión (${T_FUSION}°C).`;
+                stateClass = 'bg-primary-blue/70';
+            } else if (temp >= T_FUSION && temp < T_EBULLICION) {
+                stateText = `LÍQUIDO: A ${temp}°C, se encuentra entre los puntos de fusión y ebullición.`;
+                stateClass = 'bg-safe/70';
+            } else {
+                stateText = `GAS: A ${temp}°C, está por encima del punto de ebullición (${T_EBULLICION}°C) como Formaldehído puro.`;
+                stateClass = 'bg-red-500/70';
+            }
+
+            output.textContent = stateText;
+            output.className = `mt-4 p-4 text-center text-lg font-bold rounded-lg transition duration-500 ${stateClass}`;
+        }
+
+        checkBtn.addEventListener('click', checkPhysicalState);
+
+
+        // --- 6. Conversor de Unidades Dinámico ---
+        const ppmInput = document.getElementById('ppm-input');
+        const mgM3Output = document.getElementById('mg-m3-output');
+        const tempConverterInput = document.getElementById('temp-converter-input');
+        const fOutput = document.getElementById('f-output');
+        const kOutput = document.getElementById('k-output');
+
+        // CONSTANTES para CH₂O (Formaldehído)
+        const M_FORMALDEHIDO = 30.03; // Masa molar (g/mol)
+
+        function convertConcentration() {
+            const ppm = parseFloat(ppmInput.value);
+            if (isNaN(ppm) || ppm < 0) {
+                mgM3Output.textContent = '0.00';
+                return;
+            }
+            
+            // Fórmula simplificada a 25°C y 1 atm: mg/m³ = (ppm * M) / 24.45 
+            const mg_m3 = (ppm * M_FORMALDEHIDO) / 24.45; 
+            
+            mgM3Output.textContent = mg_m3.toFixed(2);
+        }
+
+        function convertTemperature() {
+            const c = parseFloat(tempConverterInput.value);
+            if (isNaN(c)) {
+                fOutput.textContent = '0.00';
+                kOutput.textContent = '0.00';
+                return;
+            }
+
+            // Celsius a Fahrenheit
+            const f = (c * 9/5) + 32;
+            // Celsius a Kelvin
+            const k = c + 273.15;
+            
+            fOutput.textContent = f.toFixed(2);
+            kOutput.textContent = k.toFixed(2);
+        }
+
+        ppmInput.addEventListener('input', convertConcentration);
+        tempConverterInput.addEventListener('input', convertTemperature);
+
+
+        // --- 7. Simulación 3D de CH₂O con Three.js (Sin Cambios) ---
+        function setupThreeJS() {
+            const container = document.getElementById('molecule-3d-container');
+            if (!container) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // Responsive handling
+            const handleResize = () => {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+            };
+            window.addEventListener('resize', handleResize);
+
+            // Lighting
+            scene.add(new THREE.AmbientLight(0x404040, 5));
+            const light = new THREE.PointLight(0xffffff, 50, 100);
+            light.position.set(10, 10, 10);
+            scene.add(light);
+
+            // Geometries for atoms
+            const carbonGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const hydrogenGeometry = new THREE.SphereGeometry(0.2, 32, 32);
+            const oxygenGeometry = new THREE.SphereGeometry(0.4, 32, 32);
+            const bondGeometry = new THREE.CylinderGeometry(0.08, 0.08, 1.0, 32);
+
+            // Materials
+            const carbonMaterial = new THREE.MeshPhongMaterial({ color: 0x374151 }); // Dark Gray
+            const hydrogenMaterial = new THREE.MeshPhongMaterial({ color: 0xf9fafb }); // White
+            const oxygenMaterial = new THREE.MeshPhongMaterial({ color: 0xef4444 }); // Red
+            const bondMaterial = new THREE.MeshPhongMaterial({ color: 0x4b5563 }); // Gray
+
+            // --- Formaldehyde (CH2O) structure: Carbon central atom (trigonal planar) ---
+
+            const carbon = new THREE.Mesh(carbonGeometry, carbonMaterial);
+            carbon.position.set(0, 0, 0);
+            const oxygen = new THREE.Mesh(oxygenGeometry, oxygenMaterial);
+            oxygen.position.set(0, 1.2, 0);
+            const hydrogen1 = new THREE.Mesh(hydrogenGeometry, hydrogenMaterial);
+            hydrogen1.position.set(1.1 * Math.sin(Math.PI / 6), -1.1 * Math.cos(Math.PI / 6), 0);
+            const hydrogen2 = new THREE.Mesh(hydrogenGeometry, hydrogenMaterial);
+            hydrogen2.position.set(-1.1 * Math.sin(Math.PI / 6), -1.1 * Math.cos(Math.PI / 6), 0);
+
+            // Bonds
+            const bondCO1 = new THREE.Mesh(bondGeometry, bondMaterial);
+            bondCO1.position.set(0, 0.6, 0.05);
+            bondCO1.rotation.z = Math.PI / 2;
+
+            const bondCO2 = new THREE.Mesh(bondGeometry, bondMaterial);
+            bondCO2.position.set(0, 0.6, -0.05);
+            bondCO2.rotation.z = Math.PI / 2;
+
+            const bondCH1 = new THREE.Mesh(bondGeometry, bondMaterial);
+            bondCH1.position.set(hydrogen1.position.x / 2, hydrogen1.position.y / 2, hydrogen1.position.z / 2);
+            bondCH1.lookAt(carbon.position);
+            bondCH1.rotation.x = Math.PI / 2;
+            bondCH1.scale.set(1, 1, 1.1);
+
+            const bondCH2 = new THREE.Mesh(bondGeometry, bondMaterial);
+            bondCH2.position.set(hydrogen2.position.x / 2, hydrogen2.position.y / 2, hydrogen2.position.z / 2);
+            bondCH2.lookAt(carbon.position);
+            bondCH2.rotation.x = Math.PI / 2;
+            bondCH2.scale.set(1, 1, 1.1);
+
+            const molecule = new THREE.Group();
+            molecule.add(carbon, oxygen, hydrogen1, hydrogen2, bondCO1, bondCO2, bondCH1, bondCH2);
+            scene.add(molecule);
+
+            camera.position.z = 4; // Zoom out slightly
+
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            // Mouse and Touch Event Handlers
+            const startDrag = (e) => {
+                isDragging = true;
+                const clientX = e.clientX !== undefined ? e.clientX : e.touches[0].clientX;
+                const clientY = e.clientY !== undefined ? e.clientY : e.touches[0].clientY;
+                previousMousePosition.x = clientX;
+                previousMousePosition.y = clientY;
+            };
+
+            const endDrag = () => {
+                isDragging = false;
+            };
+
+            const doDrag = (e) => {
+                if (!isDragging) return;
+                const clientX = e.clientX !== undefined ? e.clientX : e.touches[0].clientX;
+                const clientY = e.clientY !== undefined ? e.clientY : e.touches[0].clientY;
+
+                const deltaX = clientX - previousMousePosition.x;
+                const deltaY = clientY - previousMousePosition.y;
+
+                molecule.rotation.y += deltaX * 0.005;
+                molecule.rotation.x += deltaY * 0.005;
+
+                previousMousePosition.x = clientX;
+                previousMousePosition.y = clientY;
+            };
+
+            renderer.domElement.addEventListener('mousedown', startDrag);
+            renderer.domElement.addEventListener('mouseup', endDrag);
+            renderer.domElement.addEventListener('mousemove', doDrag);
+            renderer.domElement.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Prevent scrolling on touch
+                startDrag(e);
+            });
+            renderer.domElement.addEventListener('touchend', endDrag);
+            renderer.domElement.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // Prevent scrolling on touch
+                doDrag(e);
+            });
+
+
+            // Animation Loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Auto-rotation when not dragging
+                if (!isDragging) {
+                    molecule.rotation.y += 0.002;
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+        }
+
+
+        // --- 8. Panel de Riesgo Dinámico ---
+        const riskSlider = document.getElementById('risk-slider');
+        const sliderValueDisplay = document.getElementById('slider-value');
+        const riskDisplay = document.getElementById('risk-level-display');
+
+        function updateRiskPanel() {
+            const concentration = parseFloat(riskSlider.value);
+            sliderValueDisplay.textContent = concentration.toFixed(1);
+
+            let levelText = '';
+            let levelClass = '';
+            let riskTitle = '';
+
+            if (concentration <= 0.5) {
+                // Nivel Bajo (TWA/STEL)
+                riskTitle = 'NIVEL BAJO: PRECAUCIÓN';
+                levelText = `Se detectan hasta ${concentration} ppm. Aunque es bajo, ${concentration > 0.1 ? 'ya se percibe el olor (límite de olor) y puede causar leve irritación en ojos.' : 'está por debajo del límite de olor y el riesgo es mínimo.'}`;
+                levelClass = 'bg-safe'; // Verde
+            } else if (concentration > 0.5 && concentration <= 5.0) {
+                // Nivel Medio (Irritación Severa)
+                riskTitle = 'ADVERTENCIA: IRRATACIÓN SEVERA';
+                levelText = `Con ${concentration} ppm, la irritación de ojos, garganta y vías respiratorias es significativa. Se requiere ventilación de emergencia y EPP completo.`;
+                levelClass = 'bg-yellow-500 text-gray-900'; // Amarillo
+            } else {
+                // Nivel Alto (Peligro de Muerte)
+                riskTitle = 'PELIGRO INMEDIATO PARA LA VIDA Y LA SALUD (IDLH)';
+                levelText = `A ${concentration} ppm, existe un riesgo **EXTREMO** de espasmo bronquial, edema pulmonar, y potencial de muerte. Evacúe inmediatamente y use equipo de respiración autónomo (SCBA).`;
+                levelClass = 'bg-red-700 animate-pulse'; // Rojo
+            }
+
+            riskDisplay.innerHTML = `<h5 class="text-2xl font-extrabold mb-2">${riskTitle}</h5><p class="text-lg">${levelText}</p>`;
+            // Reemplazar todas las clases de color existentes
+            riskDisplay.className = `risk-level-display mt-6 p-5 text-center rounded-lg shadow-xl text-white ${levelClass}`;
+        }
+
+        riskSlider.addEventListener('input', updateRiskPanel);
+
+        // --- 9. Gráfico de Barras D3.js ---
+        function drawHistoricalChart() {
+            const data = [
+                { year: 1970, limit: 5.0 },
+                { year: 1980, limit: 3.0 },
+                { year: 1995, limit: 1.0 },
+                { year: 2020, limit: 0.75 } 
+            ];
+
+            const container = d3.select("#chart-container");
+            const containerNode = container.node();
+            const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+
+            // Responsive width/height
+            const width = containerNode.clientWidth - margin.left - margin.right;
+            const height = 250 - margin.top - margin.bottom;
+
+            container.html(''); // Clear existing content
+
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // 1. Scales
+            const x = d3.scaleBand()
+                .range([0, width])
+                .domain(data.map(d => d.year))
+                .padding(0.3);
+
+            const y = d3.scaleLinear()
+                .range([height, 0])
+                .domain([0, d3.max(data, d => d.limit) + 0.5]); 
+
+            // 2. Axes
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
+                .selectAll("text")
+                .style("fill", "#9ca3af"); // Gray 400
+
+            svg.append("g")
+                .call(d3.axisLeft(y).ticks(5).tickSize(-width).tickFormat(d => d.toFixed(1) + " ppm"))
+                .selectAll("text")
+                .style("fill", "#9ca3af"); // Gray 400
+
+            // Remove vertical lines
+            svg.selectAll(".domain").remove();
+            svg.selectAll(".tick line").style("stroke", "#4b5563"); // Gray 600
+
+            // 3. Bars
+            svg.selectAll(".bar")
+                .data(data)
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.year))
+                .attr("width", x.bandwidth())
+                .attr("y", height) // Start animation from bottom
+                .attr("height", 0)  // Start animation from zero height
+                .attr("fill", "#fcd34d") // Accent Yellow
+                .attr("rx", 5) // Rounded corners
+                .transition() // Animation
+                .duration(800)
+                .delay((d, i) => i * 150)
+                .attr("y", d => y(d.limit))
+                .attr("height", d => height - y(d.limit));
+
+            // 4. Labels (Limit values)
+            svg.selectAll(".bar-label")
+                .data(data)
+                .enter().append("text")
+                .attr("class", "bar-label")
+                .attr("x", d => x(d.year) + x.bandwidth() / 2)
+                .attr("y", d => y(d.limit) - 5)
+                .attr("text-anchor", "middle")
+                .style("fill", "#f3f4f6")
+                .style("font-size", "12px")
+                .style("font-weight", "bold")
+                .text(d => d.limit);
+
+            // 5. Axis Labels
+            svg.append("text")
+                .attr("transform", `translate(-${margin.left - 10}, ${height / 2}) rotate(-90)`)
+                .style("text-anchor", "middle")
+                .style("fill", "#9ca3af")
+                .text("Límite de Exposición (ppm)");
+
+            svg.append("text")
+                .attr("transform", `translate(${width / 2}, ${height + margin.bottom - 5})`)
+                .style("text-anchor", "middle")
+                .style("fill", "#9ca3af")
+                .text("Año");
+
+        }
+        
+        // --- 10. Lógica del Mini-Juego de Aplicaciones (NUEVA FUNCIÓN) ---
+        const products = document.querySelectorAll('.product-card');
+
+        products.forEach(card => {
+            card.addEventListener('click', function() {
+                if (this.classList.contains('revealed')) return;
+
+                const containsFormaldehyde = this.dataset.contains === 'true';
+                const resultText = this.querySelector('.result-text');
+                
+                let message = '';
+
+                if (containsFormaldehyde) {
+                    this.classList.add('revealed', 'positive');
+                    message = '¡SÍ! Se usa en resinas, adhesivos o como conservante.';
+                    resultText.classList.remove('text-safe');
+                    resultText.classList.add('text-red-300');
+                } else {
+                    this.classList.add('revealed', 'negative');
+                    message = '¡NO! (O solo en trazas naturales muy bajas e inofensivas).';
+                    resultText.classList.remove('text-red-300');
+                    resultText.classList.add('text-safe');
+                }
+                
+                resultText.textContent = message;
+                resultText.classList.add('opacity-100');
+                this.style.cursor = 'default';
+            });
+        });
+
+
+        window.onload = function () {
+             // Iniciar la simulación 3D
+             setupThreeJS();
+             
+             // Inicializar la simulación de estado físico
+             checkPhysicalState();
+
+             // Inicializar el conversor de unidades
+             tempConverterInput.value = 25; 
+             convertConcentration();
+             convertTemperature();
+
+             // Inicializar el nuevo panel de riesgo
+             updateRiskPanel();
+
+             // Inicializar el gráfico D3.js
+             drawHistoricalChart();
+        };
+
+        // Re-dibujar gráfico en resize para hacerlo responsive
+        window.addEventListener('resize', drawHistoricalChart);
+
+    </script>
+</body>
+</html>
+
